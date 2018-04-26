@@ -33,7 +33,7 @@ void basicVecAdd( float *A,  float *B, float *C, int n)
 
     // Initialize thread block and kernel grid dimensions ---------------------
 
-    const unsigned int BLOCK_SIZE = 512;
+    const unsigned int BLOCK_SIZE = 256;
 
     //INSERT CODE HERE
     
