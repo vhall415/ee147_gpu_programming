@@ -15,27 +15,28 @@ __global__ void hist_kernel(unsigned int* input, unsigned int* bins, unsigned in
 
     extern __shared__ unsigned int hist[];
 
-    int i = threadIdx.x + blockDim.x * blockIdx.x;
-    int initial = i;
-    if(i < num_bins)
-	hist[i] = 0;
-    //if(threadIdx.x == 256)
-//	hist[threadIdx.x] = 1;
+    int i = 0;
+    while(i * blockDim.x + threadIdx.x < num_bins){
+	hist[i * blockDim.x + threadIdx.x] = 0;
+	i++;
+    }
     __syncthreads();
 
-    //int i = threadIdx.x + blockDim.x * blockIdx.x;
+    i = threadIdx.x + blockDim.x * blockIdx.x;
 
     int stride = blockDim.x * gridDim.x;
-
-    while(i < num_elements) {
-	atomicAdd(&(hist[input[i]]), 1);
-	i += stride;
+    int val = 0;
+    while(val * stride + i < num_elements) {
+	atomicAdd(&(hist[input[val * stride + i]]), 1);
+	val++;
     }
     __syncthreads();
     
-    if(initial < num_bins)
-	atomicAdd(&bins[initial], hist[initial]);
-	//bins[threadIdx.x] = hist[threadIdx.x];
+    val = 0;
+    while(val * blockDim.x + threadIdx.x < num_bins) {
+	atomicAdd(&bins[val * blockDim.x + threadIdx.x], hist[val * blockDim.x + threadIdx.x]);
+  	val++;
+    }
 }
 
 /******************************************************************************
@@ -49,7 +50,8 @@ void histogram(unsigned int* input, unsigned int* bins, unsigned int num_element
 
     dim3 DimGrid( (num_elements-1)/BLOCK_SIZE + 1, 1, 1);
     dim3 DimBlock(BLOCK_SIZE, 1, 1);
-
+//    dim3 DimGrid(30,1,1);
+//    dim3 DimBlock(32,1,1);
     printf("Number of blocks: %d\n", (num_elements-1)/BLOCK_SIZE + 1);
 
     hist_kernel<<<DimGrid, DimBlock, num_bins*sizeof(unsigned int)>>>(input, bins, num_elements, num_bins);
